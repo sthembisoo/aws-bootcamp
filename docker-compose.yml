@@ -19,3 +19,47 @@
           - NODE_ENV=development
           - REACT_APP_BACKEND_URL=http://localhost:4567
         command: ["npm", "start"]
+      dynamodb-local:
+      # https://statckoverflow.com/questions/67533058/persist-local-dynamodb=in-volums-lack-permission-unable-to-open-database
+      # We need to add user:root to get this working
+        user: root
+        command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+        image: "amazon/dynamodb-local:latest"
+        container_name: dynamodb-local
+        ports:
+        - "8000:8000"
+        volumes:
+        - "./docker/dynamodb:/home/dynamodblocal/data"
+        working_dir: /home/dynamodblocal
+      db:
+        image: postgres:13-alpine
+        restart: always
+        environment:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports:
+          - "5432:5432"
+        volumes:
+          - db:/var/lib/postgresql/data
+
+      xray-daemon:
+        image: amazon/aws-xray-daemon
+        environment:
+          AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+          AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+          AWS_REGION: ${AWS_REGION}
+        command:
+           - "xray -o -b xray-daemon:2000"
+        ports:
+          - "2000:2000/udp"
+
+    networks:
+      internal-network:
+        driver: bridge
+        name: cruddur
+  
+    volumes:
+      db:
+        driver: local
+  
+
